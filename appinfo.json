@@ -1,0 +1,35 @@
+{
+    "appKeys": {
+        "AKEY_ACTION": 1,
+        "AKEY_ID": 3,
+        "AKEY_MODULE": 0,
+        "AKEY_NAME": 2,
+        "AKEY_STATUS": 4,
+        "AKEY_USERNAME": 5,
+        "AKEY_USERPASSWORD": 6
+    },
+    "capabilities": [
+        "configurable"
+    ],
+    "companyName": "martin@almstrom.nu",
+    "longName": "Butler for Pebble",
+    "projectType": "native",
+    "resources": {
+        "media": [
+            {
+                "file": "images/Butler-28x28.png",
+                "menuIcon": true,
+                "name": "IMAGE_LOGO",
+                "type": "png"
+            }
+        ]
+    },
+    "sdkVersion": "2",
+    "shortName": "Butler",
+    "uuid": "282b6c94-6b10-463c-8b85-1a3719e9906b",
+    "versionCode": 1,
+    "versionLabel": "1.0",
+    "watchapp": {
+        "watchface": false
+    }
+}
