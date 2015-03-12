@@ -16,11 +16,6 @@ static TextLayer *textLayer;
 static BitmapLayer *bitmapLayer;
 static GBitmap *logo;
 static MenuLayer *menuLayer;
-static char serverName[61];
-static bool useHttps = false;
-static int16_t port = 8081;
-//static bool hasConfiguration = false;
-
 
 #define MAX_DEVICE_LIST_ITEMS (30)
 #define MAX_DEVICE_NAME_LENGTH (16)
@@ -64,23 +59,9 @@ void updateDevice(int id, bool status){
     }
   }
 }
-/*void sendConfiguration(){
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "Sending configuration");
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "Configuration useHttps: %i, port: %i, serverName: %s", useHttps, port, serverName);
-	DictionaryIterator *iter;
-	app_message_outbox_begin(&iter);
-	dict_write_cstring(iter, AKEY_MODULE, "configuration");
-	dict_write_cstring(iter, AKEY_ACTION, "read");
-	dict_write_cstring(iter, AKEY_SERVERNAME, serverName);
-	dict_write_uint16(iter, AKEY_PORT, port);
-	int16_t useHttpsValue = useHttps ? 1 : 0;
-	dict_write_uint16(iter, AKEY_USEHTTPS, useHttpsValue);
-	app_message_outbox_send();
-}*/
+
 void in_received_handler(DictionaryIterator *received, void *context) {
 	APP_LOG(APP_LOG_LEVEL_DEBUG, "incoming message received");
-// Check for fields you expect to receive
-//	APP_LOG(APP_LOG_LEVEL_DEBUG, "%s", received);
 	Tuple *moduleTuple = dict_find(received, AKEY_MODULE);
 	Tuple *actionTuple = dict_find(received, AKEY_ACTION);
 	if (!moduleTuple || !actionTuple) {
@@ -102,9 +83,14 @@ void in_received_handler(DictionaryIterator *received, void *context) {
   		setDevice(idTuple->value->int8, nameTuple->value->cstring, statusTuple->value->uint8);
   		menu_layer_reload_data(menuLayer);
     } else if (strcmp(actionTuple->value->cstring, "select") == 0) {
+      APP_LOG(APP_LOG_LEVEL_DEBUG, "Select device");
       Tuple *idTuple = dict_find(received, AKEY_ID);
       Tuple *statusTuple = dict_find(received, AKEY_STATUS);
-      updateDevice(idTuple->value->int8, statusTuple->value->uint8);
+      int id = idTuple->value->int8;
+ 	    APP_LOG(APP_LOG_LEVEL_DEBUG, "ID: %i", id);
+      bool status = statusTuple->value->uint8 == 1;
+      APP_LOG(APP_LOG_LEVEL_DEBUG, "STATUS: %s", status ? "true" : "false");
+      updateDevice(id, status);
       menu_layer_reload_data(menuLayer);
     }
   } else if (strcmp(moduleTuple->value->cstring, "error") == 0) {
@@ -117,7 +103,15 @@ void in_received_handler(DictionaryIterator *received, void *context) {
   }
 }
 
-
+static int16_t menu_get_header_height_callback(MenuLayer *menu_layer, uint16_t section_index, void *data) {
+  return MENU_CELL_BASIC_HEADER_HEIGHT;
+}
+static uint16_t menu_get_num_sections_callback(MenuLayer *menu_layer, void *data) {
+  return 1;
+}
+static void menu_draw_header_callback(GContext* ctx, const Layer *cell_layer, uint16_t section_index, void *data) {
+  menu_cell_basic_header_draw(ctx, cell_layer, "Devices");
+}
 static int16_t get_cell_height_callback(struct MenuLayer *menu_layer, MenuIndex *cell_index, void *data) {
 	return 44;
 }
@@ -192,11 +186,14 @@ static void window_load(Window *window) {
   
 	menuLayer = menu_layer_create(frame);
 	menu_layer_set_callbacks(menuLayer, NULL, (MenuLayerCallbacks) {
-		.get_cell_height = (MenuLayerGetCellHeightCallback) get_cell_height_callback,
+    .get_cell_height = (MenuLayerGetCellHeightCallback) get_cell_height_callback,
 		.draw_row = (MenuLayerDrawRowCallback) draw_row_callback,
 		.get_num_rows = (MenuLayerGetNumberOfRowsInSectionsCallback) get_num_rows_callback,
 		.select_click = (MenuLayerSelectCallback) select_callback,
-		.select_long_click = (MenuLayerSelectCallback) select_long_callback
+		.select_long_click = (MenuLayerSelectCallback) select_long_callback,
+    .get_num_sections = (MenuLayerGetNumberOfSectionsCallback) menu_get_num_sections_callback,
+    .get_header_height = (MenuLayerGetHeaderHeightCallback) menu_get_header_height_callback,
+    .draw_header = (MenuLayerDrawHeaderCallback) menu_draw_header_callback
 	});
 	menu_layer_set_click_config_onto_window(menuLayer, window);
 	layer_set_hidden(menu_layer_get_layer(menuLayer), true);
@@ -228,11 +225,6 @@ static void init(void) {
 }
 
 static void deinit(void) {
-/*  app_message_deregister_callbacks();
-  gbitmap_destroy(logo);
-  bitmap_layer_destroy(bitmapLayer);
-  text_layer_destroy(textLayer);
-  menu_layer_destroy(menuLayer);*/
 	window_destroy(window);
 }
 

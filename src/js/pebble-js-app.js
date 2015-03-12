@@ -225,22 +225,41 @@ function saveConfiguration(){
 function getBaseUrl(){
 	return 'http' + (options.usehttps === 'true' ? 's' : '') + '://' + options.server + ':' + options.port + '/';
 }
+
+function getXmlHttpRequest(method, url){
+  var req = new XMLHttpRequest();
+  req.open(method, url, true);
+  req.setRequestHeader('Content-Type', 'application/json; charset=utf8');
+  if (options.useauth){
+    req.setRequestHeader("Authorization", "Basic " + Base64.encode(options.username + ":" + options.password)); 
+  }
+  req.timeout = 5000;
+  req.ontimeout = function(e){
+    console.log("Request timed out..." + JSON.stringify(e));
+    pebbleSendQueue.send({
+      AKEY_MODULE: "error",
+      AKEY_ACTION: "connection"
+    });
+  };
+  req.onerror = function(e){
+    console.log("An unexpected error occured. " + JSON.stringify(e));
+    pebbleSendQueue.send({
+      AKEY_MODULE: "error",
+      AKEY_ACTION: "connection"
+    });
+  };
+  return req;
+}
+
 function getDevices() {
 	if (options.server === '' || options.server === undefined || options.server === null || !options.server){
 		console.log('exiting...');
 		return;
 	}
-
 	var baseUrl = getBaseUrl();
   console.log('baseUrl = ' + baseUrl);
   var response;
-  var req = new XMLHttpRequest();
-  // build the GET request
-  req.open('GET', baseUrl + "device", true);
-  req.setRequestHeader('Content-Type', 'application/json; charset=utf8');
-  if (options.useauth){
-    req.setRequestHeader("Authorization", "Basic " + Base64.encode(options.username + ":" + options.password)); 
-  }
+  var req = getXmlHttpRequest('GET', baseUrl + "device");
   req.onload = function(e) {
     if (req.readyState == 4) {
       // 200 - HTTP OK
@@ -272,21 +291,18 @@ function getDevices() {
           AKEY_ACTION: "connection"
         });
       }
+      return;
     }
+    console.log(JSON.stringify(e));
   };
   req.send(null);
+  console.log('request sent');
 }
 function updateDevice(deviceId, status) {
 	var baseUrl = getBaseUrl();
   var response;
-  var req = new XMLHttpRequest();
-  // build the GET request
-  req.open('POST', baseUrl + "device", true);
-
-  req.setRequestHeader('Content-Type', 'application/json; charset=utf8');
-  if (options.useauth){
-    req.setRequestHeader("Authorization", "Basic " + Base64.encode(options.username + ":" + options.password)); 
-  }
+  
+  var req = getXmlHttpRequest('POST', baseUrl + "device");
   req.onload = function(e) {
     if (req.readyState == 4) {
       // 200 - HTTP OK
@@ -296,7 +312,7 @@ function updateDevice(deviceId, status) {
         pebbleSendQueue.send({
           AKEY_MODULE: "device",
           AKEY_ACTION: "select",
-          AKEY_ID: response.id,
+          AKEY_ID: parseInt(response.id),
           AKEY_STATUS: response.status ? 1 : 0
         });
       }
@@ -313,7 +329,7 @@ function updateDevice(deviceId, status) {
 }
 // Set callback for the app ready event
 Pebble.addEventListener("ready", function(e) {
-  console.log("Pebble JS Kit up and running! ");
+  console.log("PebbleKit JS up and running!");
   loadConfiguration();
   initialized = true;
   getDevices();
